@@ -38,30 +38,39 @@ public class hashload
 	    }
 	String filename = "heap." + ps;
 	String outputname = "hash." + ps;
+	FileInputStream fis = null;
+	RandomAccessFile output = null;
 	try
 	    {
-		FileInputStream fis = new FileInputStream(filename);
+		fis = new FileInputStream(filename);
 		//BufferedReader sc = new BufferedReader(new FileReader(filename));
 		// output is random access so that when a new hash index is inserted it can be inserted into the right spot
-		RandomAccessFile output = new RandomAccessFile(new File(outputname), "rws");
-		long startTime = System.currentTimeMillis();
+		output = new RandomAccessFile(new File(outputname), "rws");
+	        long startTime = System.currentTimeMillis();
+		//Page
+
+		//Record
 		// Total Count of Records Inserted
 		long TotalNumOfRecords = 0;
+		// Size of the record itself
+		int recordSize = 0;		
+		//Bucket
+		// overall offset of the file from the start point;
+		long totalOffSet = 0;
 		// Total Count of Pages Viewed
 		long TotalNummOfPages = 0;
 		// Size of Bucket in Bytes
-		int bucketByteSize = 44000;
+		//int bucketByteSize = 22000;
+		int bucketByteSize = 84;
+		// Total number of buckets
 		int numberOfBuckets = 1024;
 		// Length of FileInputStream read
 		int len = pagesize + 8;
 		// how far into the page the record is 
 		int buffset = 0;
-		// Size of the record itself
-		int recordSize = 0;
 		// where the page from the heap file will be read into
 		byte[] buffer = new byte[len]; 
-		// overall offset of the file from the start point;
-		long totalOffSet = 0;
+		
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[numberOfBuckets];
 		long numOfPages = 0;
@@ -164,7 +173,7 @@ public class hashload
 			    // The index key within the bucket
 			    int hashvalue = bnname.hashCode();
 			    // Which Bucket to put the hash value
-			    int hashindex = hashvalue % 255;
+			    int hashindex = hashvalue % (numberOfBuckets/2) + (numberOfBuckets/2); // to make it positive
 			    // The offset of the record from the start of the file
 			    long pageOffSet = numOfPages * pagesize;
 			    long heapfileOffSet = buffset + pageOffSet;
@@ -177,9 +186,16 @@ public class hashload
 			    bytestream.write(fileos);
 			    byte[] writeBytes = bytestream.toByteArray();
 			    int bytelength = writeBytes.length;
+			    //System.out.print(bnname + " ");
+			    //System.out.print(hashvalue + " " );
+			    //System.out.println(hashindex);
+			    if(hashindex == 0)
+				{
+				    System.out.println(bnname);
+				}
 			    while(sizeOfHashBucket[hashindex] + bytelength > bucketByteSize)
 				{
-				    hashindex = (hashindex + 1) % numberOfBuckets;
+				    hashindex = (hashindex + 1) %  numberOfBuckets;
 				}
 			    long bucketOffSet = hashindex * bucketByteSize;
 			    long hashfileOffSet = bucketOffSet + sizeOfHashBucket[hashindex];
@@ -188,17 +204,45 @@ public class hashload
 			    sizeOfHashBucket[hashindex] += bytelength;
 			    recNum++;
 			}
+			int leftOver = pagesize - buffset;
+			System.out.println(leftOver);
+			totalOffSet += leftOver;
 		    }
 	    }
 	catch (FileNotFoundException e)
 	    {
 		System.out.println("File Not Found");
-		System.exit(0);	    
+		//System.exit(0);	    
 	    }
 	catch (IOException e)
 	    {
 		e.printStackTrace();
-		System.exit(0);	    
+		//System.exit(0);	    
+	    }
+	finally
+	    {
+		if(output != null)
+		    {
+			try
+			    {
+				output.close();
+			    }
+			catch (IOException ex)
+			    {
+
+			    }
+		    }
+		if(fis != null)
+		    {
+			try
+			    {
+				fis.close();
+			    }
+			catch (IOException ex)
+			    {
+				
+			    }
+		    }
 	    }
     }
     // Read each line of heap file

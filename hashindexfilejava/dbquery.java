@@ -46,7 +46,6 @@ public class dbquery
         String inputname = "heap." + pagesize;
 	// Searching through BNName: textQuery
 	// Amount of bytes to read at a time = page size:
-	ArrayList<TestPage> UnfilledPages = new ArrayList<>();
         try
 	    {
 		FileInputStream is = new FileInputStream(inputname);
