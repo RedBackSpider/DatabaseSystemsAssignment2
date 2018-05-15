@@ -38,6 +38,9 @@ public class hashload
 	    }
 	String filename = "heap." + ps;
 	String outputname = "hash." + ps;
+	writeRecordsToFile(filename, outputname, pagesize);
+    }
+    public static void writeIndexesToFile(String filename, String outputname, String pagesize){
 	FileInputStream fis = null;
 	RandomAccessFile output = null;
 	try
@@ -47,20 +50,16 @@ public class hashload
 		// output is random access so that when a new hash index is inserted it can be inserted into the right spot
 		output = new RandomAccessFile(new File(outputname), "rws");
 	        long startTime = System.currentTimeMillis();
-		//Page
-
-		//Record
-		// Total Count of Records Inserted
+	        // Total Count of Records Inserted
 		long TotalNumOfRecords = 0;
 		// Size of the record itself
 		int recordSize = 0;		
-		//Bucket
 		// overall offset of the file from the start point;
 		long totalOffSet = 0;
 		// Total Count of Pages Viewed
-		long TotalNummOfPages = 0;
+		long numOfPages = 0;
 		// Size of Bucket in Bytes
-		//int bucketByteSize = 22000;
+		//int bucketByteSize = 44004; // exactly divisible by 12
 		int bucketByteSize = 84;
 		// Total number of buckets
 		int numberOfBuckets = 1024;
@@ -73,7 +72,6 @@ public class hashload
 		
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[numberOfBuckets];
-		long numOfPages = 0;
 		
 		// While the end of all pages has not been found
 		while((len = fis.read(buffer)) != -1)
@@ -88,6 +86,7 @@ public class hashload
 			int recNum = 0;
 			while(recNum < numberOfRecordsInPage)
 			{
+			    TotalNumOfRecords++;
 			    // Because this is a non-fixed length database, each record must be read in its entirety before creating the hashinex
 			    // As all the string fields (BNNAME, BNSTATUS etc.) are variable (are not automatically set to the maximum length)
 			    recordSize = 0;
@@ -105,6 +104,7 @@ public class hashload
 			    String bnname = new String(slice3);
 			    buffset = buffset + namelength;
 			    recordSize = recordSize + namelength;
+			    
 
 			    byte[] slice4 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read status length from file
 			    int statuslength = byteToInt(slice4);
@@ -170,29 +170,22 @@ public class hashload
 			    long bnabn = byteToLong(slice16);
 			    buffset = buffset + 8;
 			    recordSize = recordSize + 8;
+			    byte[] fileos = longToByte(totalOffSet);
+			    totalOffSet += recordSize;
+			    
 			    // The index key within the bucket
 			    int hashvalue = bnname.hashCode();
 			    // Which Bucket to put the hash value
 			    int hashindex = hashvalue % (numberOfBuckets/2) + (numberOfBuckets/2); // to make it positive
 			    // The offset of the record from the start of the file
-			    long pageOffSet = numOfPages * pagesize;
-			    long heapfileOffSet = buffset + pageOffSet;
 			    // increase the overall offset of the file (where the next file is located)
 			    recordSize = 0;
 			    byte[] value = intToByte(hashvalue);
-			    byte[] fileos = longToByte(heapfileOffSet);
 			    ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
 			    bytestream.write(value);
 			    bytestream.write(fileos);
 			    byte[] writeBytes = bytestream.toByteArray();
 			    int bytelength = writeBytes.length;
-			    //System.out.print(bnname + " ");
-			    //System.out.print(hashvalue + " " );
-			    //System.out.println(hashindex);
-			    if(hashindex == 0)
-				{
-				    System.out.println(bnname);
-				}
 			    while(sizeOfHashBucket[hashindex] + bytelength > bucketByteSize)
 				{
 				    hashindex = (hashindex + 1) %  numberOfBuckets;
@@ -204,20 +197,17 @@ public class hashload
 			    sizeOfHashBucket[hashindex] += bytelength;
 			    recNum++;
 			}
-			int leftOver = pagesize - buffset;
-			System.out.println(leftOver);
+			int leftOver = pagesize + 8- buffset;
 			totalOffSet += leftOver;
 		    }
 	    }
 	catch (FileNotFoundException e)
 	    {
 		System.out.println("File Not Found");
-		//System.exit(0);	    
 	    }
 	catch (IOException e)
 	    {
 		e.printStackTrace();
-		//System.exit(0);	    
 	    }
 	finally
 	    {
@@ -245,13 +235,6 @@ public class hashload
 		    }
 	    }
     }
-    // Read each line of heap file
-    // Keep count of page and number of records held by page
-    // Get the BNNAME from the heap and convert to hashcode()
-    // Bitmask it and find correct bucket
-    // In Correct Bucket get number of records already written to bucket
-    // Calculate offset from fixed size and write to file
-    // Increase counter for bucket size
     
     public static byte[] intToByte(int x)
     {

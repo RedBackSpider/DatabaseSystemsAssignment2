@@ -59,9 +59,9 @@ public class hashquery
 	int queryValue = textQuery.hashCode();
 	System.out.println(textQuery);
 	System.out.println("Warby Wares");
-	System.out.println(queryValue);
+	System.out.println(queryValue % numberOfBuckets);
 	System.out.println("Warby Wares".hashCode());
-	int bucketIndex = (queryValue % numberOfBuckets) + numberOfBuckets/2 ;
+	int bucketIndex = (queryValue % numberOfBuckets);
 	RandomAccessFile inputhash = null;
 	FileInputStream inputheap = null;
 	try
@@ -90,6 +90,7 @@ public class hashquery
 		while(!backToStart && !recordFound)
 		    {
 			offset = bucketIndex * bucketByteSize;
+			
 			inputhash.seek(offset);
 		        
 			System.out.println(bucketIndex);
@@ -101,9 +102,11 @@ public class hashquery
 			    byte[] valueSlice = new byte[4];
 			    inputhash.read(valueSlice);
 			    int value = byteToInt(valueSlice);
+
 			    byte[] offsetSlice = new byte[8];
 			    inputhash.read(offsetSlice);
 			    long fileOffset = byteToLong(offsetSlice);
+			    System.out.println(fileOffset);
 			    if(value == queryValue)
 			    {
 				inputheap.skip(fileOffset);
