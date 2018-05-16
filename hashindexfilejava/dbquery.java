@@ -158,9 +158,9 @@ public class dbquery
 		long endTime = System.currentTimeMillis();
 		long duration = (endTime - startTime);
 		System.out.println("Time taken in milliseconds: " + duration);
-		System.out.println("Number of records found: " + RecordFound);
 		System.out.println("Number of records searched: " + numOfRecords);
 		System.out.println("Number of pages searched: " + numOfPages);
+		System.out.println("Number of records found: " + RecordFound);
 	    }
 	catch(IOException e)
 	    {

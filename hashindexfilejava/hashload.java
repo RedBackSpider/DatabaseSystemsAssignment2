@@ -66,7 +66,7 @@ public class hashload
 		// overall offset of the file from the start point;
 		long totalOffSet = 0;
 		// Size of Bucket in Bytes
-		int bucketByteSize = 44004; // exactly divisible by 12
+		int bucketByteSize = 44008; // exactly divisible by 12 including space for bucket
 		//int bucketByteSize = 84;
 		// Total number of buckets
 		int numberOfBuckets = 1024;
@@ -78,6 +78,12 @@ public class hashload
 		byte[] buffer = new byte[len]; 		
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[numberOfBuckets];
+		// each bucket starts with an int to represent how many indexes there are in this bucket 
+		for(int i = 0; i < sizeOfHashBucket.length; i++)
+		    {
+			sizeOfHashBucket[i] += 4;  
+		    }
+		int[] numberOfIndexes = new int[numberOfBuckets];
 		while((len = fis.read(buffer)) != -1)
 		    {
 			// overall number of pages
@@ -224,12 +230,24 @@ public class hashload
 				}
 			    // Increase size of hash bucket by size of the hash index inserted into bucket
 			    sizeOfHashBucket[hashindex] += bytelength;
+			    numberOfIndexes[hashindex]++;
 			    // increase number of recs read
 			    recNum++;
 			}
 			// increase offset by leftover bytes that have nothing in them
 			int leftOver = pagesize - buffset;
 			totalOffSet += leftOver;
+		    }
+		for(int i = 0; i < sizeOfHashBucket.length; i++)
+		    {
+			// move to start of each bucket
+			int bucketOffSet = i * bucketByteSize;
+			// convert the number of  to byte[]
+			byte[] value = intToByte(numberOfIndexes[i]);
+			// write number of indexes to file at start of bucket
+			output.seek(bucketOffSet);
+			output.write(value);
+			System.out.println(i + " " + numberOfIndexes[i]);
 		    }
 	    }
 	catch (FileNotFoundException e)

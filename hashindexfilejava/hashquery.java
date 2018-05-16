@@ -71,9 +71,8 @@ public class hashquery
     public static long[] QueryFile(String hashfile, String heapfile, int pagesize, String textQuery)
     {
 	// Size of Bucket in Bytes
-	final int bucketByteSize = 44004;
+	final int bucketByteSize = 44008;
 	//int bucketByteSize = 84;
-	final int numberOfIndexes = bucketByteSize / 12;
 	final int numberOfBuckets = 1024;
 	// counter for end of program
 	int numOfBuckets = 0;
@@ -108,6 +107,10 @@ public class hashquery
 			offset = bucketIndex * bucketByteSize;	
 			// move file pointer to start of the bucket
 			inputhash.seek(offset);
+			// read number of entries into bucket
+			byte[] numberSlice = new byte[4];
+			inputhash.read(numberSlice);
+			int numberOfIndexes = byteToInt(numberSlice);
 			int indexNum = 0;
 			while(indexNum < numberOfIndexes && !recordFound)
 			    {
