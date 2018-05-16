@@ -37,6 +37,7 @@ public class hashload
 		System.out.println("Non-numerical pagesize entered");
 		System.exit(0);
 	    }
+	// Files to read and write to
 	String filename = "heap." + ps;
 	String outputname = "hash." + ps;
 	long startTime = System.currentTimeMillis();
@@ -51,6 +52,8 @@ public class hashload
     public static long[] writeIndexesToFile(String filename, String outputname, int pagesize){
 	FileInputStream fis = null;
 	RandomAccessFile output = null;
+	//FileOutputStream fos = null;
+	//BufferedOutputStream fis = null;
 	long numOfRecords = 0; 
 	long numOfPages = 0; 
 	try
@@ -58,9 +61,8 @@ public class hashload
 		fis = new FileInputStream(filename);
 		//BufferedReader sc = new BufferedReader(new FileReader(filename));
 		// output is random access so that when a new hash index is inserted it can be inserted into the right spot
-		output = new RandomAccessFile(new File(outputname), "rws");
-		// Size of the record itself
-		int recordSize = 0;		
+		output = new RandomAccessFile(new File(outputname), "rw");
+		//fos = new FileOutputStream(output);
 		// overall offset of the file from the start point;
 		long totalOffSet = 0;
 		// Size of Bucket in Bytes
@@ -69,130 +71,134 @@ public class hashload
 		// Total number of buckets
 		int numberOfBuckets = 1024;
 		// Length of FileInputStream read
-		int len = pagesize + 8;
+		int len = pagesize;
 		// how far into the page the record is 
 		int buffset = 0;
 		// where the page from the heap file will be read into
 		byte[] buffer = new byte[len]; 		
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[numberOfBuckets];
-		
-		// While the end of all pages has not been found
 		while((len = fis.read(buffer)) != -1)
 		    {
+			// overall number of pages
 			numOfPages++;
 			// Get total number of records in page
 			byte[] slice = Arrays.copyOfRange(buffer, 0, 8);
 			long numberOfRecordsInPage = byteToLong(slice);
-			// Set offset of page to long value
+			// add buffset to overall Offset
 			buffset = 8;
 			totalOffSet += buffset;
 			int recNum = 0;
 			while(recNum < numberOfRecordsInPage)
 			{
-			    
+			    // overall number of records
 			    numOfRecords++;
 			    // Because this is a non-fixed length database, each record must be read in its entirety before creating the hashinex
 			    // As all the string fields (BNNAME, BNSTATUS etc.) are variable (are not automatically set to the maximum length)
-			    recordSize = 0;
-			    byte[] slice1 = Arrays.copyOfRange(buffer, buffset, buffset + 14); // Read BUSINESS NAMES from file
+			    // Size of the heap file record itself
+			    int recordSize = 0;		
+			    // Read BUSINESS NAMES from file
+			    byte[] slice1 = Arrays.copyOfRange(buffer, buffset, buffset + 14); 
 			    String regname = new String(slice1);
 			    buffset = buffset + 14;
 			    recordSize = recordSize + 14;
-
-			    byte[] slice2 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // Read namelength to file
+			    // Read namelength to file
+			    byte[] slice2 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int namelength = byteToInt(slice2);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice3 = Arrays.copyOfRange(buffer, buffset, buffset + namelength); // read bnname from file
+			    // read bnname from file
+			    byte[] slice3 = Arrays.copyOfRange(buffer, buffset, buffset + namelength); 
 			    String bnname = new String(slice3);
 			    buffset = buffset + namelength;
 			    recordSize = recordSize + namelength;
-			    
-
-			    byte[] slice4 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read status length from file
+			    // read status length from file
+			    byte[] slice4 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int statuslength = byteToInt(slice4);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice5 = Arrays.copyOfRange(buffer, buffset, buffset + statuslength); // read bnstatus from file
+			    // read bnstatus from file
+			    byte[] slice5 = Arrays.copyOfRange(buffer, buffset, buffset + statuslength); 
 			    String bnstatus = new String(slice5);
 			    buffset = buffset + statuslength;
 			    recordSize = recordSize + statuslength;
-			    
-			    byte[] slice6 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read regdate length from file
+			    // read regdate length from file
+			    byte[] slice6 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int reglength = byteToInt(slice6);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-			    
-			    byte[] slice7 = Arrays.copyOfRange(buffer, buffset, buffset + reglength); // read regdt from file
+			    // read regdt from file
+			    byte[] slice7 = Arrays.copyOfRange(buffer, buffset, buffset + reglength); 
 			    String bnregdt = new String(slice7);
 			    buffset = buffset + reglength;
 			    recordSize = recordSize + reglength;
-			    
-			    byte[] slice8 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read cancel date length from file
+			    // read cancel date length from file
+			    byte[] slice8 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int cancellength = byteToInt(slice8);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice9 = Arrays.copyOfRange(buffer, buffset, buffset + cancellength); // read bnstatus from file
+			    // read bnstatus from file
+			    byte[] slice9 = Arrays.copyOfRange(buffer, buffset, buffset + cancellength); 
 			    String bncanceldt = new String(slice9);
 			    buffset = buffset + cancellength;
 			    recordSize = recordSize + cancellength;
-			    
-			    byte[] slice10 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read renew length from file
+			    // read renew length from file
+			    byte[] slice10 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int renewlength = byteToInt(slice10);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice11 = Arrays.copyOfRange(buffer, buffset, buffset + renewlength); // read bnstatus from file
+			    // read bnstatus from file
+			    byte[] slice11 = Arrays.copyOfRange(buffer, buffset, buffset + renewlength); 
 			    String bnrenewdt = new String(slice11);
 			    buffset = buffset + renewlength;
 			    recordSize = recordSize + renewlength;
-			    
-			    byte[] slice12 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read status length from file
+			    // read status length from file
+			    byte[] slice12 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int statenumlength = byteToInt(slice12);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice13 = Arrays.copyOfRange(buffer, buffset, buffset + statenumlength); // read bnstatus from file
+			    // read bnstatus from file
+			    byte[] slice13 = Arrays.copyOfRange(buffer, buffset, buffset + statenumlength); 
 			    String bnstatenum = new String(slice13);
 			    buffset = buffset + statenumlength;
 			    recordSize = recordSize + statenumlength;
-			    
-			    byte[] slice14 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // read status length from file
+			    // read status length from file
+			    byte[] slice14 = Arrays.copyOfRange(buffer, buffset, buffset + 4); 
 			    int statereglength = byteToInt(slice14);
 			    buffset = buffset + 4;
 			    recordSize = recordSize + 4;
-
-			    byte[] slice15 = Arrays.copyOfRange(buffer, buffset, buffset + statereglength); // read bnstatus from file
+			    // read bnstatus from file
+			    byte[] slice15 = Arrays.copyOfRange(buffer, buffset, buffset + statereglength); 
 			    String bnstatereg = new String(slice15);
 			    buffset = buffset + statereglength;
 			    recordSize = recordSize + statereglength;
-			    
-			    byte[] slice16 = Arrays.copyOfRange(buffer, buffset, buffset + 8); // read status length from file
+			    // read status length from file
+			    byte[] slice16 = Arrays.copyOfRange(buffer, buffset, buffset + 8); 
 			    long bnabn = byteToLong(slice16);
 			    buffset = buffset + 8;
 			    recordSize = recordSize + 8;
-			    
+			    // set position of record in heap file to overall offset
 			    byte[] fileos = longToByte(totalOffSet);
+			    // increase offset by this record
 			    totalOffSet += recordSize;
 			    
+			    // Get the value for hashquery to search for
 			    int hashvalue = bnname.hashCode();
-			    // Which Bucket to put the hash value
-			    int hashindex = Math.abs(hashvalue % numberOfBuckets); // to make it positive
+			    // Which Bucket to put the hash value, Maths.abs to make it positive
+			    int hashindex = Math.abs(hashvalue % numberOfBuckets); 
 			    
-			    // The offset of the record from the start of the file
-			    // increase the overall offset of the file (where the next file is located)
-			    
+			    // convert the hashvalue to byte[]
 			    byte[] value = intToByte(hashvalue);
+			    // write hashvalue and heapfileofset to new bytearray
 			    ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
 			    bytestream.write(value);
 			    bytestream.write(fileos);
 			    byte[] writeBytes = bytestream.toByteArray();
+			    // size of hash index
 			    int bytelength = writeBytes.length;
+			    // index record is to be placed in if hash index is optimal
 			    int startIndex = hashindex;
+			    // continue to look for 
 			    while(sizeOfHashBucket[hashindex] + bytelength > bucketByteSize)
 				{
 				    hashindex = (hashindex + 1) %  numberOfBuckets;
@@ -201,25 +207,28 @@ public class hashload
 					    throw new IOException();
 					}
 				}
-			    long bucketOffSet = hashindex * bucketByteSize;
-			    long hashfileOffSet = bucketOffSet + sizeOfHashBucket[hashindex];
-			    long begSeek = System.currentTimeMillis();
+			    // how far from the start of the hash file to the start of the bucket
+			    int bucketOffSet = hashindex * bucketByteSize;
+			    // how far from the start of the hash file the start of the hash index in bucket
+			    int hashfileOffSet = bucketOffSet + sizeOfHashBucket[hashindex];
+			    // write the hashindex to the correct position
 			    output.seek(hashfileOffSet);
 			    output.write(writeBytes);
-			    long endSeek = System.currentTimeMillis();
 	
-			    if(numOfRecords % 10000 == 0)
+			    if(numOfRecords % 500000 == 0)
 			    {
-				System.out.println("Num of Records: " + numOfRecords + " Duration in milliseconds of insertion: " + (endSeek - begSeek));
 				System.out.println("Business Name: " + bnname + " Hash Value of Business Name: " + hashvalue+ " Bucket Index: " +  hashindex);
 				System.out.println("Offset Heap: "  +(totalOffSet - recordSize) + " Record Size: " + recordSize + " Buffset: " + buffset);
 				System.out.println("Offset Hash: "  + hashfileOffSet + " Bucket offset: " + bucketOffSet);
-				}// The index key within the bucket
+				System.out.println("writeBytes length: " + writeBytes.length);
+				}
+			    // Increase size of hash bucket by size of the hash index inserted into bucket
 			    sizeOfHashBucket[hashindex] += bytelength;
+			    // increase number of recs read
 			    recNum++;
-			    recordSize = 0;
 			}
-			int leftOver = pagesize- buffset;
+			// increase offset by leftover bytes that have nothing in them
+			int leftOver = pagesize - buffset;
 			totalOffSet += leftOver;
 		    }
 	    }
@@ -229,10 +238,11 @@ public class hashload
 	    }
 	catch (IOException e)
 	    {
-		e.printStackTrace();
+		System.out.println("Error in insertion, too many records");
 	    }
 	finally
 	    {
+		// Close all inputs and outputs
 		if(output != null)
 		    {
 			try
@@ -255,11 +265,12 @@ public class hashload
 				
 			    }
 		    }
+		// return statistics
 		long[] numbers = {numOfRecords, numOfPages};
 		return numbers;
 	    }
     }
-    
+    // Bitwise operations to convert data type to byte array and back
     public static byte[] intToByte(int x)
     {
 	byte[] blength = new byte[4];

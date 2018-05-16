@@ -54,19 +54,18 @@ public class dbquery
 		long numOfPages = 0;
 		int offset = 0; // Offset for each page
 		int buffset = 0; // Offset within page, for each record
-		int len = pagesize + 8; // length of a page + 8 is read (includes number of records
+		int len = pagesize; // length of a page + 8 is read (includes number of records
 		byte[] buffer = new byte[len];
 		long reccount = 0;
-		TestRecord correctRecord; // record to be assigned
-		boolean RecordFound = false;
-		while((len = is.read(buffer)) != -1 && !RecordFound) //While there are still bytes to be found and a record has not been found
+		int RecordFound = 0;
+		while((len = is.read(buffer)) != -1) //While there are still bytes to be found and a record has not been found
 		{
 		    numOfPages++;
 		    byte[] slice = Arrays.copyOfRange(buffer, 0, 8);
 		    reccount = byteToLong(slice);
 		    int recnum = 0;
 		    buffset = 8;
-		    while(recnum < reccount && !RecordFound) // For each record in the page
+		    while(recnum < reccount) // For each record in the page
 		    {
 			byte[] slice1 = Arrays.copyOfRange(buffer, buffset, buffset + 14); // Read BUSINESS NAMES from file
 			String regname = new String(slice1);
@@ -136,7 +135,7 @@ public class dbquery
 		        
 			if(bnnamelower.contains(textQuery))
 			{
-			    RecordFound = true;
+			    RecordFound++;
 			    if(bnabn != -1)
 				{
 				    System.out.println("BN_REG_NAME: " + regname + "\nBN_NAME: " + bnname + "\nBN_STATUS: " + bnstatus + "\nBN_REG_DATE: " + bnregdt + "\nBN_CANCEL_DT: " + bncanceldt + "\nBN_RENEW_DT: " + bnrenewdt + "\nBN_STATE_NUM: " + bnstatenum + "\nBN_STATE_REG: " + bnstatereg + "\nBN_ABN: " + bnabn);
@@ -150,7 +149,7 @@ public class dbquery
 			numOfRecords++;
 		    }
 		}
-		if(!RecordFound)
+		if(RecordFound == 0)
 		    {
 			System.out.println("No record found");
 		    }
@@ -159,6 +158,7 @@ public class dbquery
 		long endTime = System.currentTimeMillis();
 		long duration = (endTime - startTime);
 		System.out.println("Time taken in milliseconds: " + duration);
+		System.out.println("Number of records found: " + RecordFound);
 		System.out.println("Number of records searched: " + numOfRecords);
 		System.out.println("Number of pages searched: " + numOfPages);
 	    }
