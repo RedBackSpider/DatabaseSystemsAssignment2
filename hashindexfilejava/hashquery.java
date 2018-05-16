@@ -49,19 +49,21 @@ public class hashquery
 			System.exit(0);
 		    }
 	    }
+	if(textQuery.equals(""))
+	    {
+		System.exit(0);
+	    }
 	String hashfile = "hash." + pagesize;
 	String heapfile = "heap." + pagesize;
 	// Size of Bucket in Bytes
-	//int bucketByteSize = 44004;
-	int bucketByteSize = 84;
+	int bucketByteSize = 44004;
+	//int bucketByteSize = 84;
 	int numberOfIndexes = bucketByteSize / 12;
 	int numberOfBuckets = 1024;
 	int queryValue = textQuery.hashCode();
-	System.out.println(textQuery);
-	System.out.println("Warby Wares");
-	System.out.println(queryValue % numberOfBuckets);
-	System.out.println("Warby Wares".hashCode());
-	int bucketIndex = (queryValue % numberOfBuckets);
+	int bucketIndex = Math.abs(queryValue % numberOfBuckets);
+	System.out.println(bucketIndex);
+	System.out.println(queryValue%numberOfBuckets);
 	RandomAccessFile inputhash = null;
 	FileInputStream inputheap = null;
 	try
@@ -82,7 +84,7 @@ public class hashquery
 		// overall offset of the file from the start point;
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[2 * numberOfBuckets];
-		long numOfPages = 0;
+		long numOfRecords = 0;
 		int startIndex = bucketIndex;
 		boolean backToStart = false;
 		boolean recordFound = false;
@@ -92,21 +94,21 @@ public class hashquery
 			offset = bucketIndex * bucketByteSize;
 			
 			inputhash.seek(offset);
-		        
-			System.out.println(bucketIndex);
 			int indexNum = 0;
-			while(indexNum < numberOfIndexes)
+			while(indexNum < numberOfIndexes && !recordFound)
 			{
 			    indexNum++;
-
+			    numOfRecords++;
 			    byte[] valueSlice = new byte[4];
 			    inputhash.read(valueSlice);
 			    int value = byteToInt(valueSlice);
-
+			    if(indexNum == 1)
+				{
+				    System.out.println(value + " " + offset);
+				}    
 			    byte[] offsetSlice = new byte[8];
 			    inputhash.read(offsetSlice);
 			    long fileOffset = byteToLong(offsetSlice);
-			    System.out.println(fileOffset);
 			    if(value == queryValue)
 			    {
 				inputheap.skip(fileOffset);
@@ -122,7 +124,6 @@ public class hashquery
 				byte[] slice2 = Arrays.copyOfRange(buffer, buffset, buffset + 4); // Read namelength to file
 				int namelength = byteToInt(slice2);
 				buffset = buffset + 4;
-				
 				System.out.println(regname);
 				byte[] slice3 = Arrays.copyOfRange(buffer, buffset, buffset + namelength); // read bnname from file
 				String bnname = new String(slice3);
@@ -191,12 +192,13 @@ public class hashquery
 				    }
 			    }
 			}
-			bucketIndex = (bucketIndex + 1) % numberOfBuckets;
-			if(bucketIndex  == startIndex )
+		        bucketIndex = (bucketIndex + 1) % numberOfBuckets;
+		        if(bucketIndex  == startIndex )
 			    {
 				backToStart = true;
 			    }
 		    }
+		System.out.println(numOfRecords);
 	    }
 	catch (FileNotFoundException e)
 	    {

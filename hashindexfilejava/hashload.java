@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.RandomAccessFile;
 import java.io.ByteArrayOutputStream;
@@ -38,29 +39,33 @@ public class hashload
 	    }
 	String filename = "heap." + ps;
 	String outputname = "hash." + ps;
-	writeRecordsToFile(filename, outputname, pagesize);
+	long startTime = System.currentTimeMillis();
+	long[] numbers = writeIndexesToFile(filename, outputname, pagesize);
+	long endTime = System.currentTimeMillis();
+	long duration = (endTime - startTime);
+	System.out.println("Time taken in milliseconds: " + duration);
+	System.out.println("Number of records searched: " + numbers[0]);
+	System.out.println("Number of pages searched: " + numbers[1]);
     }
-    public static void writeIndexesToFile(String filename, String outputname, String pagesize){
+
+    public static long[] writeIndexesToFile(String filename, String outputname, int pagesize){
 	FileInputStream fis = null;
 	RandomAccessFile output = null;
+	long numOfRecords = 0; 
+	long numOfPages = 0; 
 	try
 	    {
 		fis = new FileInputStream(filename);
 		//BufferedReader sc = new BufferedReader(new FileReader(filename));
 		// output is random access so that when a new hash index is inserted it can be inserted into the right spot
 		output = new RandomAccessFile(new File(outputname), "rws");
-	        long startTime = System.currentTimeMillis();
-	        // Total Count of Records Inserted
-		long TotalNumOfRecords = 0;
 		// Size of the record itself
 		int recordSize = 0;		
 		// overall offset of the file from the start point;
 		long totalOffSet = 0;
-		// Total Count of Pages Viewed
-		long numOfPages = 0;
 		// Size of Bucket in Bytes
-		//int bucketByteSize = 44004; // exactly divisible by 12
-		int bucketByteSize = 84;
+		int bucketByteSize = 44004; // exactly divisible by 12
+		//int bucketByteSize = 84;
 		// Total number of buckets
 		int numberOfBuckets = 1024;
 		// Length of FileInputStream read
@@ -68,8 +73,7 @@ public class hashload
 		// how far into the page the record is 
 		int buffset = 0;
 		// where the page from the heap file will be read into
-		byte[] buffer = new byte[len]; 
-		
+		byte[] buffer = new byte[len]; 		
 		// Size of the bucket
 		int[] sizeOfHashBucket = new int[numberOfBuckets];
 		
@@ -86,7 +90,8 @@ public class hashload
 			int recNum = 0;
 			while(recNum < numberOfRecordsInPage)
 			{
-			    TotalNumOfRecords++;
+			    
+			    numOfRecords++;
 			    // Because this is a non-fixed length database, each record must be read in its entirety before creating the hashinex
 			    // As all the string fields (BNNAME, BNSTATUS etc.) are variable (are not automatically set to the maximum length)
 			    recordSize = 0;
@@ -170,34 +175,51 @@ public class hashload
 			    long bnabn = byteToLong(slice16);
 			    buffset = buffset + 8;
 			    recordSize = recordSize + 8;
+			    
 			    byte[] fileos = longToByte(totalOffSet);
 			    totalOffSet += recordSize;
 			    
-			    // The index key within the bucket
 			    int hashvalue = bnname.hashCode();
 			    // Which Bucket to put the hash value
-			    int hashindex = hashvalue % (numberOfBuckets/2) + (numberOfBuckets/2); // to make it positive
+			    int hashindex = Math.abs(hashvalue % numberOfBuckets); // to make it positive
+			    
 			    // The offset of the record from the start of the file
 			    // increase the overall offset of the file (where the next file is located)
-			    recordSize = 0;
+			    
 			    byte[] value = intToByte(hashvalue);
 			    ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
 			    bytestream.write(value);
 			    bytestream.write(fileos);
 			    byte[] writeBytes = bytestream.toByteArray();
 			    int bytelength = writeBytes.length;
+			    int startIndex = hashindex;
 			    while(sizeOfHashBucket[hashindex] + bytelength > bucketByteSize)
 				{
 				    hashindex = (hashindex + 1) %  numberOfBuckets;
+				    if (hashindex == startIndex)
+					{
+					    throw new IOException();
+					}
 				}
 			    long bucketOffSet = hashindex * bucketByteSize;
 			    long hashfileOffSet = bucketOffSet + sizeOfHashBucket[hashindex];
+			    long begSeek = System.currentTimeMillis();
 			    output.seek(hashfileOffSet);
 			    output.write(writeBytes);
+			    long endSeek = System.currentTimeMillis();
+	
+			    if(numOfRecords % 10000 == 0)
+			    {
+				System.out.println("Num of Records: " + numOfRecords + " Duration in milliseconds of insertion: " + (endSeek - begSeek));
+				System.out.println("Business Name: " + bnname + " Hash Value of Business Name: " + hashvalue+ " Bucket Index: " +  hashindex);
+				System.out.println("Offset Heap: "  +(totalOffSet - recordSize) + " Record Size: " + recordSize + " Buffset: " + buffset);
+				System.out.println("Offset Hash: "  + hashfileOffSet + " Bucket offset: " + bucketOffSet);
+				}// The index key within the bucket
 			    sizeOfHashBucket[hashindex] += bytelength;
 			    recNum++;
+			    recordSize = 0;
 			}
-			int leftOver = pagesize + 8- buffset;
+			int leftOver = pagesize- buffset;
 			totalOffSet += leftOver;
 		    }
 	    }
@@ -233,6 +255,8 @@ public class hashload
 				
 			    }
 		    }
+		long[] numbers = {numOfRecords, numOfPages};
+		return numbers;
 	    }
     }
     

@@ -62,89 +62,11 @@ public class dbload
 	    int numOfRecords = 0;
 	    sc.readLine(); // Do not use first line
 	    String line = sc.readLine();
-	    long num = 0;
+	    int currentPageSize = 0;
+	    int currentNumberOfRecords = 0;
+	    ArrayList<HFRecord> page = new ArrayList<HFRecord>();
 	    while(line != null)
 	    {
-		num++;
-		if(num%200000 == 0)
-		    {
-			System.out.println(num);
-			// Print to file and remove from unfilledapages
-			Iterator<HFPage> it = UnfilledPages.iterator();
-			while(it.hasNext())
-			    {
-				HFPage page = it.next();
-				int pageByteCount = page.getBytesFilled();
-				long pageNumRecords = page.getNumRecords();
-				ArrayList<HFRecord> records = page.getRecords();
-				Iterator<HFRecord> it2 = records.iterator();
-				ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
-				ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-				buffer.putLong(pageNumRecords);
-				byte[] writeBytes;
-				bytestream.write(buffer.array());
-				while(it2.hasNext())
-				    {
-					HFRecord record = it2.next();
-					byte[] registername = record.getRegName().getBytes();
-					bytestream.write(registername);
-		    
-					byte[] bnname = record.getBNName().getBytes();	
-					int bnnamesize = record.getBNNameSize();
-					byte[] namelength = intToByte(bnnamesize);
-					bytestream.write(namelength);
-					bytestream.write(bnname);
-		    
-					byte[] bnstatus = record.getStatus().getBytes();
-					int bnstatussize = record.getStatusSize();
-					byte[] statuslength = intToByte(bnstatussize);
-					bytestream.write(statuslength);
-					bytestream.write(bnstatus);
-		    
-					byte[] bnregdate = record.getRegDt().getBytes();
-					int bnregdatesize = record.getRegDtSize();
-					byte[] reglength = intToByte(bnregdatesize);
-					bytestream.write(reglength);
-					bytestream.write(bnregdate);
-
-					byte[] bncanceldate = record.getCancelDt().getBytes();
-					int bncanceldatesize = record.getCancelDtSize();
-					byte[] cancellength = intToByte(bncanceldatesize);
-					bytestream.write(cancellength);
-					bytestream.write(bncanceldate);
-
-					byte[] bnrenewdate = record.getRenewDt().getBytes();
-					int bnrenewdatesize = record.getRenewDtSize();
-					byte[] renewlength = intToByte(bnrenewdatesize);
-					bytestream.write(renewlength);
-					bytestream.write(bnrenewdate);
-
-					byte[] bnstatenum = record.getStateNum().getBytes();
-					int bnstatenumsize = record.getStateNumSize();
-					byte[] statenumlength = intToByte(bnstatenumsize);
-					bytestream.write(statenumlength);
-					bytestream.write(bnstatenum);
-    		    
-					byte[] bnstatereg = record.getStateReg().getBytes();
-					int bnstateregsize = record.getStateRegSize();
-					byte[] statereglength = intToByte(bnstateregsize);
-					bytestream.write(statereglength);
-					bytestream.write(bnstatereg);
-		    
-					long abn = record.getABN();
-					byte[] abnbyte = longToByte(abn);
-					bytestream.write(abnbyte);
-				    }
-				writeBytes = bytestream.toByteArray();
-				byte[] paddingBytes = new byte[pagesize+8-writeBytes.length];
-				os.write(writeBytes,0,writeBytes.length);
-				os.write(paddingBytes,0,paddingBytes.length);
-			    }
-			UnfilledPages.clear();
-			HFPage page = new HFPage(pagesize);
-			UnfilledPages.add(page);
-		    }
-	    
 		ArrayList<String> linetokens = new ArrayList<String>(Arrays.asList(line.split("\t", -1)));
 		if(linetokens.size() != 9)
 		{
@@ -181,96 +103,151 @@ public class dbload
 		    os.close();
 		    System.exit(0);
 		}
-		Iterator<HFPage> iter = UnfilledPages.iterator();
-		boolean inserted = false;
-		while (iter.hasNext() && !inserted)
-		{
-		    HFPage page = iter.next();
-		    inserted = page.insertRecord(test);
-		}
-		if(!inserted)
-		{
-		    HFPage page = new HFPage(pagesize);
-		    page.insertRecord(test);
-		    UnfilledPages.add(page);
-		}
-		/*Collections.sort(UnfilledPages, new Comparator<HFPage>() {
-			public int compare(HFPage p1, HFPage p2) {
-			    return p2.getBytesFilled() - p1.getBytesFilled();
-			}
-			});*/ // cannot sort with extremely large number of pages
 		numOfRecords++;
 		line = sc.readLine();
-	    }
-	    Iterator<HFPage> it = UnfilledPages.iterator();
-	    while(it.hasNext())
-	    {
-		HFPage page = it.next();
-		int pageByteCount = page.getBytesFilled();
-		long pageNumRecords = page.getNumRecords();
-		ArrayList<HFRecord> records = page.getRecords();
-		Iterator<HFRecord> it2 = records.iterator();
-		ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
-	        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-		buffer.putLong(pageNumRecords);
-		byte[] writeBytes;
-		bytestream.write(buffer.array());
-		while(it2.hasNext())
+		if(currentPageSize + test.getByteSize() > pagesize)
 		{
-		    HFRecord record = it2.next();
-		    byte[] registername = record.getRegName().getBytes();
-		    bytestream.write(registername);
-		    
-		    byte[] bnname = record.getBNName().getBytes();	
-		    int bnnamesize = record.getBNNameSize();
-		    byte[] namelength = intToByte(bnnamesize);
-		    bytestream.write(namelength);
-		    bytestream.write(bnname);
-		    
-		    byte[] bnstatus = record.getStatus().getBytes();
-		    int bnstatussize = record.getStatusSize();
-		    byte[] statuslength = intToByte(bnstatussize);
-		    bytestream.write(statuslength);
-		    bytestream.write(bnstatus);
-		    
-		    byte[] bnregdate = record.getRegDt().getBytes();
-		    int bnregdatesize = record.getRegDtSize();
-		    byte[] reglength = intToByte(bnregdatesize);
-		    bytestream.write(reglength);
-		    bytestream.write(bnregdate);
-
-		    byte[] bncanceldate = record.getCancelDt().getBytes();
-		    int bncanceldatesize = record.getCancelDtSize();
-		    byte[] cancellength = intToByte(bncanceldatesize);
-		    bytestream.write(cancellength);
-		    bytestream.write(bncanceldate);
-
-		    byte[] bnrenewdate = record.getRenewDt().getBytes();
-		    int bnrenewdatesize = record.getRenewDtSize();
-		    byte[] renewlength = intToByte(bnrenewdatesize);
-		    bytestream.write(renewlength);
-		    bytestream.write(bnrenewdate);
-
-		    byte[] bnstatenum = record.getStateNum().getBytes();
-    		    int bnstatenumsize = record.getStateNumSize();
-		    byte[] statenumlength = intToByte(bnstatenumsize);
-		    bytestream.write(statenumlength);
-		    bytestream.write(bnstatenum);
-    		    
-		    byte[] bnstatereg = record.getStateReg().getBytes();
-    		    int bnstateregsize = record.getStateRegSize();
-		    byte[] statereglength = intToByte(bnstateregsize);
-		    bytestream.write(statereglength);
-		    bytestream.write(bnstatereg);
-		    
-		    long abn = record.getABN();
-		    byte[] abnbyte = longToByte(abn);
-		    bytestream.write(abnbyte);
+		    Iterator<HFRecord> it = page.iterator();
+		    ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
+		    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		    buffer.putLong(currentNumberOfRecords);
+		    byte[] writeBytes;
+		    bytestream.write(buffer.array());
+		    while(it.hasNext())
+			{
+			    HFRecord record = it.next();
+			    byte[] registername = record.getRegName().getBytes();
+			    bytestream.write(registername);
+			    
+			    byte[] bnname = record.getBNName().getBytes();	
+			    int bnnamesize = record.getBNNameSize();
+			    byte[] namelength = intToByte(bnnamesize);
+			    bytestream.write(namelength);
+			    bytestream.write(bnname);
+			    
+			    byte[] bnstatus = record.getStatus().getBytes();
+			    int bnstatussize = record.getStatusSize();
+			    byte[] statuslength = intToByte(bnstatussize);
+			    bytestream.write(statuslength);
+			    bytestream.write(bnstatus);
+			    
+			    byte[] bnregdate = record.getRegDt().getBytes();
+			    int bnregdatesize = record.getRegDtSize();
+			    byte[] reglength = intToByte(bnregdatesize);
+			    bytestream.write(reglength);
+			    bytestream.write(bnregdate);
+			    
+			    byte[] bncanceldate = record.getCancelDt().getBytes();
+			    int bncanceldatesize = record.getCancelDtSize();
+			    byte[] cancellength = intToByte(bncanceldatesize);
+			    bytestream.write(cancellength);
+			    bytestream.write(bncanceldate);
+			    
+			    byte[] bnrenewdate = record.getRenewDt().getBytes();
+			    int bnrenewdatesize = record.getRenewDtSize();
+			    byte[] renewlength = intToByte(bnrenewdatesize);
+			    bytestream.write(renewlength);
+			    bytestream.write(bnrenewdate);
+			    
+			    byte[] bnstatenum = record.getStateNum().getBytes();
+			    int bnstatenumsize = record.getStateNumSize();
+			    byte[] statenumlength = intToByte(bnstatenumsize);
+			    bytestream.write(statenumlength);
+			    bytestream.write(bnstatenum);
+			    
+			    byte[] bnstatereg = record.getStateReg().getBytes();
+			    int bnstateregsize = record.getStateRegSize();
+			    byte[] statereglength = intToByte(bnstateregsize);
+			    bytestream.write(statereglength);
+			    bytestream.write(bnstatereg);
+			    
+			    long bnabn = record.getABN();
+			    byte[] abnbyte = longToByte(bnabn);
+			    bytestream.write(abnbyte);
+			}
+		    writeBytes = bytestream.toByteArray();
+		    byte[] paddingBytes = new byte[pagesize+8-writeBytes.length];
+		    os.write(writeBytes,0,writeBytes.length);
+		    os.write(paddingBytes,0,paddingBytes.length);
+		    page.clear();
+		    page.add(test);
+		    currentPageSize = 0;
+		    currentPageSize += test.getByteSize();
+		    currentNumberOfRecords = 0;
+		    currentNumberOfRecords++;
 		}
-		writeBytes = bytestream.toByteArray();
-		byte[] paddingBytes = new byte[pagesize+8-writeBytes.length];
-		os.write(writeBytes,0,writeBytes.length);
-		os.write(paddingBytes,0,paddingBytes.length);
+		else
+		{
+		    page.add(test);
+		    currentPageSize += test.getByteSize();
+		    currentNumberOfRecords++;
+		}
+		if(line == null)
+		{
+		Iterator<HFRecord> it = page.iterator();
+		    ByteArrayOutputStream bytestream = new ByteArrayOutputStream();
+		    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		    buffer.putLong(currentNumberOfRecords);
+		    byte[] writeBytes;
+		    bytestream.write(buffer.array());
+		    while(it.hasNext())
+			{
+			    HFRecord record = it.next();
+			    byte[] registername = record.getRegName().getBytes();
+			    bytestream.write(registername);
+			    
+			    byte[] bnname = record.getBNName().getBytes();	
+			    int bnnamesize = record.getBNNameSize();
+			    byte[] namelength = intToByte(bnnamesize);
+			    bytestream.write(namelength);
+			    bytestream.write(bnname);
+			    
+			    byte[] bnstatus = record.getStatus().getBytes();
+			    int bnstatussize = record.getStatusSize();
+			    byte[] statuslength = intToByte(bnstatussize);
+			    bytestream.write(statuslength);
+			    bytestream.write(bnstatus);
+			    
+			    byte[] bnregdate = record.getRegDt().getBytes();
+			    int bnregdatesize = record.getRegDtSize();
+			    byte[] reglength = intToByte(bnregdatesize);
+			    bytestream.write(reglength);
+			    bytestream.write(bnregdate);
+			    
+			    byte[] bncanceldate = record.getCancelDt().getBytes();
+			    int bncanceldatesize = record.getCancelDtSize();
+			    byte[] cancellength = intToByte(bncanceldatesize);
+			    bytestream.write(cancellength);
+			    bytestream.write(bncanceldate);
+			    
+			    byte[] bnrenewdate = record.getRenewDt().getBytes();
+			    int bnrenewdatesize = record.getRenewDtSize();
+			    byte[] renewlength = intToByte(bnrenewdatesize);
+			    bytestream.write(renewlength);
+			    bytestream.write(bnrenewdate);
+			    
+			    byte[] bnstatenum = record.getStateNum().getBytes();
+			    int bnstatenumsize = record.getStateNumSize();
+			    byte[] statenumlength = intToByte(bnstatenumsize);
+			    bytestream.write(statenumlength);
+			    bytestream.write(bnstatenum);
+			    
+			    byte[] bnstatereg = record.getStateReg().getBytes();
+			    int bnstateregsize = record.getStateRegSize();
+			    byte[] statereglength = intToByte(bnstateregsize);
+			    bytestream.write(statereglength);
+			    bytestream.write(bnstatereg);
+			    
+			    long bnabn = record.getABN();
+			    byte[] abnbyte = longToByte(bnabn);
+			    bytestream.write(abnbyte);
+			}
+		    writeBytes = bytestream.toByteArray();
+		    byte[] paddingBytes = new byte[pagesize+8-writeBytes.length];
+		    os.write(writeBytes,0,writeBytes.length);
+		    os.write(paddingBytes,0,paddingBytes.length);    
+		}
+
 	    }
 	    long endTime = System.currentTimeMillis();
 	    long duration = (endTime - startTime);
